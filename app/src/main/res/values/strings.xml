@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">ball-thrower</string>
+
+    <!-- Main activity -->
+    <string name="btnSettings">Settings</string>
+
+    <!-- Settings activity -->
+    <string name="lblThreshold">Acceleration threshold</string>
+    <string name="btnApply">Apply</string>
+</resources>
