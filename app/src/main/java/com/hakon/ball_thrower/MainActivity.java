@@ -14,6 +14,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -22,7 +24,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelSensors;
     private Button btnSettings;
+    private Button fly;
     private SharedPreferences preferences;
+
+    private boolean ballMoving;
+
+    private ArrayList<Double> accelerations;
 
     private double highestAcceleration;
 
@@ -44,17 +51,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.initViews();
 
         this.highestAcceleration = 0d;
+        this.ballMoving = false;
 
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         this.accelSensors = this.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         this.preferences = getSharedPreferences(MainActivity.PREFERENCES_SETTINGS, 0);
         this.accelerationThreshold = preferences.getInt(SETTINGS_THRESHOLD, 10);
+        this.accelerations = new ArrayList<>();
 
         btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+            }
+        });
+
+        fly = findViewById(R.id.btn_test);
+        fly.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                moveBall(50d);
             }
         });
     }
@@ -64,42 +81,55 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Timer timer = new Timer();
         // TODO: make so you cant throw when a ball is moving
 
-        switch (event.sensor.getType()) {
-            case Sensor.TYPE_ACCELEROMETER:
-                float x = event.values[0];
-                float y = event.values[1];
-                float z = event.values[2];
+        boolean ballMoving = false;
 
-                final double acceleration = Math.sqrt(x*x + y*y + z*z) - EARTH_GRAVITY;
+        if(!ballMoving) {
+            switch (event.sensor.getType()) {
+                case Sensor.TYPE_ACCELEROMETER:
+                    float x = event.values[0];
+                    float y = event.values[1];
+                    float z = event.values[2];
 
-                // TODO: Sliding window, whatever that is :)
-                if(acceleration >= this.accelerationThreshold) { // Super exact values aren't compared, so who cares about rounding errors really
-                    Log.d(TAG, String.format("onSensorChanged: (%f, %f, %f). Acceleration: %f", x, y, z, acceleration));
+                    final double acceleration = Math.sqrt(x*x + y*y + z*z) - EARTH_GRAVITY;
 
-                    // If first is higher, > 0. Equal = 0, second is higher, <0
-                    if(Double.compare(acceleration, this.highestAcceleration) > 0) { // New highest found
-                        this.highestAcceleration = acceleration;
+                    // TODO: Sliding window, whatever that is :)
+                    if(acceleration >= this.accelerationThreshold) { // Super exact values aren't compared, so who cares about rounding errors really
+                        Log.d(TAG, String.format("onSensorChanged: (%f, %f, %f). Acceleration: %f", x, y, z, acceleration));
 
-                        Log.d(TAG, "onSensorChanged: new highest found " + this.highestAcceleration);
-                        timer.cancel(); // Cancel the old timer
+                        /*
+                        accelerations.add(acceleration);
 
-                        timer = new Timer(); // Create a new timer
-                        timer.schedule(new TimerTask() { // 150 ms without a new high
-                            @Override
-                            public void run() {
-                                Log.d(TAG, "run: " + acceleration);
-                                highestAcceleration = 0;
-                               // moveBall(acceleration);
-                                //  highest = 0;
-                            }
-                        }, 1000);
+                        if(accelerations.size() > 15) {
+                            // throw ball etcetc
+                            moveBall(Collections.max(accelerations));
+                        }
+                        */
+
+                        // If first is higher, > 0. Equal = 0, second is higher, <0
+                        if(Double.compare(acceleration, this.highestAcceleration) > 0) { // New highest found
+                            this.highestAcceleration = acceleration;
+
+                            Log.d(TAG, "onSensorChanged: new highest found " + this.highestAcceleration);
+                            timer.cancel(); // Cancel the old timer
+
+                            timer = new Timer(); // Create a new timer
+                            timer.schedule(new TimerTask() { // 150 ms without a new high
+                                @Override
+                                public void run() {
+                                    Log.d(TAG, "run: " + acceleration);
+                                    highestAcceleration = 0;
+                                    moveBall(acceleration);
+                                    //  highest = 0;
+                                }
+                            }, 1000);
+                        }
                     }
-                }
 
-                // TODO: Create timer so it looks for the highest within 0.5 seconds or some shit
-                break;
-            default:
-                break;
+                    // TODO: Create timer so it looks for the highest within 0.5 seconds or some shit
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -129,21 +159,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      * @param acceleration The starting acceleration
      */
     private void moveBall(double acceleration) {
-
-        //TODO: Probably run on new thread? xd
         double currentAcceleration = acceleration;
 
-        long lastTime = System.nanoTime();
+        final long lastTime = System.nanoTime();
 
-        while(currentAcceleration > 0d) {
-            long time = System.nanoTime();
-            int deltaTime = (int) ((time - lastTime) / 1000000);
+        Log.d(TAG, "moveBall: MOVING:-D " + acceleration);
+        this.ballMoving = true;
 
-            currentAcceleration -= EARTH_GRAVITY / deltaTime;
+        // s = v0 * t + 1/2 * a * t^2
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    float v = fly.getY();
+                    long time = System.nanoTime();
+                    int t = (int) ((time - lastTime) / 1000000);
 
-            Log.d(TAG, "moveBall: " + currentAcceleration);
-
-            lastTime = time;
-        }
+                    double y = (v * t) + (1d/2d * EARTH_GRAVITY * Math.pow(t, 2));
+                    Log.d(TAG, "moveBall: t(" + t + "), " + y);
+                    fly.setY(v + (float)y);
+                }
+            }
+        }).start();
     }
 }
