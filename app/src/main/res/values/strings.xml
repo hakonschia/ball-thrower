@@ -3,7 +3,8 @@
 
     <!-- Main activity -->
     <string name="btn_settings">Settings</string>
-    <string name="txt_height">The ball is sat on the ground</string>
+    <string name="txt_height">The ball is in your hand, if you didn\'t notice :)</string>
+    <string name="txt_highscoreDefault">No throw yet recorded</string>
 
     <!-- Settings activity -->
     <string name="lbl_threshold">Acceleration threshold</string>
