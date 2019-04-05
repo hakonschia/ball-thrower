@@ -28,12 +28,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button btnSettings;
     private ImageView imgArrow;       // Arrow indicating current direction of the ball
     private TextView txtHeight;       // The text updating throughout the throw
-    private TextView txtHighestThrow; // The top text with the highscore
-    private Button fly; // For debug purposes to test ball throws
+    private TextView txtHighestThrow; // The top text with the high score
 
     private SensorManager sensorManager;
     private Sensor accelSensors;
-    private SharedPreferences preferences;   // Holds threshold and highscore
+    private SharedPreferences preferences;   // Holds threshold and high score
     private MediaPlayer highestPointSound;   // The sound player
 
     private float accelerationThreshold; // From the settings
@@ -70,7 +69,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         this.updateHighestThrowText();
 
-        btnSettings.setOnClickListener(new View.OnClickListener() {
+
+        this.btnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 highestPointSound.start();
@@ -78,25 +78,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        fly = findViewById(R.id.btn_test);
-        fly.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                moveBall(50d);
-            }
-        });
-
         // Long clicking on the high score text resets the high score
         // Lets call this an easter egg, so it sounds fun :)
-        txtHighestThrow.setOnLongClickListener(new View.OnLongClickListener() {
+        this.txtHighestThrow.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 preferences.edit().putFloat(HIGHSCORE, 0f).apply();
                 updateHighestThrowText();
                 return true;
-                // If there is also an onClick event registered, returning true will make
-                // it only call one of the functions, ie. returning a variable
-                // called "isEventHandled" would make sense
+                // If there is also an onClick listener registered, returning true will make
+                // the app only call one of the functions, ie. returning a variable
+                // called "isEventHandled" would make sense here
             }
         });
     }
@@ -113,17 +105,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     // EARTH_GRAVITY is negative, so for it to be correct we need to add instead of subtract
                     final double acceleration = Math.sqrt(x*x + y*y + z*z) + EARTH_GRAVITY;
 
-                    // TODO: Sliding window, whatever that is :)
                     if(acceleration >= this.accelerationThreshold) {
-                        // Just adding to a list and checking when it's above a certain size
-                        // doesn't work because it might not add enough accelerations in one throw (but it kinda does tho)
-                        accelerations.add(acceleration);
+                        this.accelerations.add(acceleration);
 
-                        Log.d(TAG, String.format("onSensorChanged: Acceleration: %f", acceleration));
-
-                        if(accelerations.size() == 15) {
-                            moveBall(Collections.max(accelerations));
-                            accelerations.clear();
+                        // This kinda works, but seems very random in how often it registers
+                        if(this.accelerations.size() == 10) {
+                            double highest = Collections.max(this.accelerations);
+                            this.accelerations.clear();
+                            moveBall(highest);
                         }
                     }
                     break;
@@ -197,18 +186,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 }
                             });
                         }
-                        // Increase pitch of nice sound or whatever
+                        // Here I would increase the pitch of the sound
 
                     } else { // Ball is still going upwards
-                        // Decrease pitch
+                        // And here decrease the pitch, but this isn't implemented :)
                     }
 
                     if (dt % 16 == 0) { // Update every 16 ms (~60fps)
-                        // pos = v0 * t + 1/2 * a * t^2
 
                         // This looks pretty nasty, but all the 1000 parts are converting
                         // from m/s to m/ms. It is basically just the formula below
-                        // pos = velocity * dt + EARTH_GRAVITY * Math.pow(dt, 2) / 2d;
+                        // pos = v0 * t + 1/2 * a * t^2
                         position = (velocity / 1000f) * dt + (EARTH_GRAVITY / 1000f) * Math.pow(dt, 2) / (2d * 1000d);
 
                         if(position > highestPos) {
@@ -216,7 +204,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }
 
                         final String heightText = String.format(Locale.getDefault(),
-                                "The ball is %dm above the ground (velocity: %d)", (int)position, (int)velocity);
+                                "The ball is %dm above the ground (Thrown with velocity: %d)",
+                                (int)position,
+                                (int)velocity
+                        );
 
                         runOnUiThread(new Runnable() {
                             @Override
