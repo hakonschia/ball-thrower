@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         this.accelSensors = this.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
+        Log.d(TAG, String.format("onCreate: %f", this.accelSensors.getMaximumRange()));
         this.preferences = getSharedPreferences(MainActivity.PREFERENCES_SETTINGS, 0);
         this.accelerationThreshold = preferences.getInt(SETTINGS_THRESHOLD, 10);
 
@@ -85,14 +86,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         });
 
-        // Long clicking on the highscore text resets the highscore
-        // Lets call this an easter egg, so it sounds fun
+        // Long clicking on the high score text resets the high score
+        // Lets call this an easter egg, so it sounds fun :)
         txtHighestThrow.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
                 preferences.edit().putFloat(HIGHSCORE, 0f).apply();
                 updateHighestThrowText();
                 return true;
+                // If there is also an onClick event registered, returning true will make
+                // it only call one of the functions, ie. returning a variable
+                // called "isEventHandled" would make sense
             }
         });
     }
@@ -108,13 +112,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     // EARTH_GRAVITY is negative, so for it to be correct we need to add instead of subtract
                     final double acceleration = Math.sqrt(x*x + y*y + z*z) + EARTH_GRAVITY;
-                    Log.d(TAG, String.format("onSensorChanged: %f. Acceleration: %f", this.accelerationThreshold, acceleration));
 
                     // TODO: Sliding window, whatever that is :)
                     if(acceleration >= this.accelerationThreshold) {
                         // Just adding to a list and checking when it's above a certain size
-                        // doesnt work because it might not add enough accelerations in one throw
+                        // doesn't work because it might not add enough accelerations in one throw (but it kinda does tho)
                         accelerations.add(acceleration);
+
+                        Log.d(TAG, String.format("onSensorChanged: Acceleration: %f", acceleration));
 
                         if(accelerations.size() == 15) {
                             moveBall(Collections.max(accelerations));
@@ -163,32 +168,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
            0 = v0 - at
            -v0 = -a*t
            -v0/a = -t
-           t = (v/a) * -1 */
-        final double timeToHighest = (velocity/EARTH_GRAVITY) * -1;
+           t = -(v/a) * -1 */
+        final int timeToHighest = (int)(velocity/EARTH_GRAVITY) * -1000; // In milliseconds
 
         new Thread(new Runnable() {
             @Override
             public void run() {
                 boolean highestReached = false;
-                double position = 0; // Position of the ball
-                double highestPos = 0;
+                double position = 0d;   // Position of the ball
+                double highestPos = 0d;
 
                 // Small vibration at the start and end of the throw
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
                 v.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
 
-                while(position >= 0) { // comparing floats bad or something
-                    long dt = (System.currentTimeMillis() - startTime) / 1000; // Time since start
+                while(Double.compare(position, 0d) >= 0) {
+                    long dt = (System.currentTimeMillis() - startTime); // Time since start in ms
 
                     if(dt >= timeToHighest) { // Highest point is reached, ball is falling down
-                        if(!highestReached) {
+                        if(!highestReached) { // First time we reach this point, play a sound
                             highestReached = true;
                             highestPointSound.start();
 
-
                             runOnUiThread(new Runnable() {
                                 @Override
-                                public void run() {
+                                public void run() { // Point the arrow downwards
                                     imgArrow.setRotation(180);
                                 }
                             });
@@ -199,25 +203,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         // Decrease pitch
                     }
 
-                    // pos = v0 * t + 1/2 * a * t^2
-                    position = (velocity * dt) + (EARTH_GRAVITY / 2d * Math.pow(dt, 2));
+                    if (dt % 16 == 0) { // Update every 16 ms (~60fps)
+                        // pos = v0 * t + 1/2 * a * t^2
 
-                    long dt2 = (System.currentTimeMillis() - startTime); // Time since start
-                    double position2 = (((velocity / 1000) * dt2) + ((EARTH_GRAVITY / 1000) / 2d * Math.pow(dt2, 2)));
+                        // This looks pretty nasty, but all the 1000 parts are converting
+                        // from m/s to m/ms. It is basically just the formula below
+                        // pos = velocity * dt + EARTH_GRAVITY * Math.pow(dt, 2) / 2d;
+                        position = (velocity / 1000f) * dt + (EARTH_GRAVITY / 1000f) * Math.pow(dt, 2) / (2d * 1000d);
 
-                    if(position > highestPos) {
-                        highestPos = position;
-                    }
-
-                    final String heightText = String.format(Locale.getDefault(),
-                            "The ball is %dm above the ground", (int)position);
-
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            txtHeight.setText(heightText);
+                        if(position > highestPos) {
+                            highestPos = position;
                         }
-                    });
+
+                        final String heightText = String.format(Locale.getDefault(),
+                                "The ball is %dm above the ground (velocity: %d)", (int)position, (int)velocity);
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                txtHeight.setText(heightText);
+                            }
+                        });
+                    }
                 }
 
                 runOnUiThread(new Runnable() { // Reset text and image to default
@@ -245,7 +252,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void updateHighestThrowText() {
         float highestThrow = preferences.getFloat(HIGHSCORE, 0f);
 
-        if(highestThrow == 0f) {
+        // Float.compare returns an integer that says which value is highest (0 = equal)
+        // This is probably better than comparing two floats directly (because of imprecision)
+        if(Float.compare(highestThrow, 0f) == 0) {
             this.txtHighestThrow.setText(R.string.txt_highscoreDefault);
         } else {
             this.txtHighestThrow.setText(String.format(Locale.getDefault(),
