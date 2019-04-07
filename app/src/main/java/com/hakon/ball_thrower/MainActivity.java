@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initViews();
+        this.initViews();
 
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelerationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mAccelerations = new ArrayList<>();
         mBallTimer = new Timer();
 
-        updateHighestThrowText();
+        this.updateHighestThrowText();
 
 
         mBtnSettings.setOnClickListener(new View.OnClickListener() {
@@ -254,8 +254,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void updateHighestThrowText() {
         float highestThrow = mPreferences.getFloat(HIGHSCORE, 0f);
 
-        // Float.compare returns an integer that says which value is highest (0 = equal)
-        // This is probably better than comparing two floats directly (because of imprecision)
         if(Float.compare(highestThrow, 0f) == 0) {
             mTxtHighestThrow.setText(R.string.txt_highscoreDefault);
         } else {
