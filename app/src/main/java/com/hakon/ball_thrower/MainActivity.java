@@ -12,7 +12,6 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -21,6 +20,8 @@ import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
@@ -39,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean ballMoving; // Used to make sure a throw can't be initiated when one is in progress
 
     private ArrayList<Double> accelerations; // This holds the temporary accelerations to find the max
+    private Timer ballTimer; // Used to find the highest acceleration
 
     /* Constants */
     public static final float EARTH_GRAVITY = -9.81f; // There's an android constant for this but idk what it is :)
@@ -59,13 +61,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         this.accelSensors = this.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        Log.d(TAG, String.format("onCreate: %f", this.accelSensors.getMaximumRange()));
         this.preferences = getSharedPreferences(MainActivity.PREFERENCES_SETTINGS, 0);
         this.accelerationThreshold = preferences.getInt(SETTINGS_THRESHOLD, 10);
 
         this.highestPointSound = MediaPlayer.create(this, R.raw.hiko_are_you_kidding_me);
         this.ballMoving = false;
         this.accelerations = new ArrayList<>();
+        this.ballTimer = new Timer();
 
         this.updateHighestThrowText();
 
@@ -108,11 +110,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if(acceleration >= this.accelerationThreshold) {
                         this.accelerations.add(acceleration);
 
-                        // This kinda works, but seems very random in how often it registers
-                        if(this.accelerations.size() == 10) {
-                            double highest = Collections.max(this.accelerations);
-                            this.accelerations.clear();
-                            moveBall(highest);
+                        // First acceleration above the threshold, schedule the ball to move
+                        // with the highest acceleration found in a span of 250 milliseconds
+                        if(accelerations.size() == 1) {
+                            this.ballTimer.schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    double highest = Collections.max(accelerations);
+
+                                    // Needs to be cleared first or else it can run multiple times
+                                    accelerations.clear();
+
+                                    moveBall(highest);
+                                }
+                            }, 250);
                         }
                     }
                     break;
@@ -196,7 +207,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                         // This looks pretty nasty, but all the 1000 parts are converting
                         // from m/s to m/ms. It is basically just the formula below
-                        // pos = v0 * t + 1/2 * a * t^2
+                        // pos = v0*t + a*t^2/2
                         position = (velocity / 1000f) * dt + (EARTH_GRAVITY / 1000f) * Math.pow(dt, 2) / (2d * 1000d);
 
                         if(position > highestPos) {
