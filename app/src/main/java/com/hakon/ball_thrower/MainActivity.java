@@ -26,21 +26,21 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     /* UI */
-    private Button btnSettings;
-    private ImageView imgArrow;       // Arrow indicating current direction of the ball
-    private TextView txtHeight;       // The text updating throughout the throw
-    private TextView txtHighestThrow; // The top text with the high score
+    private Button mBtnSettings;
+    private ImageView mImgArrow;       // Arrow indicating current direction of the ball
+    private TextView mTxtHeight;       // The text updating throughout the throw
+    private TextView mTxtHighestThrow; // The top text with the high score
 
-    private SensorManager sensorManager;
-    private Sensor accelSensors;
-    private SharedPreferences preferences;   // Holds threshold and high score
-    private MediaPlayer highestPointSound;   // The sound player
+    private SensorManager mSensorManager;
+    private Sensor mAccelerationSensor;
+    private SharedPreferences mPreferences;   // Holds threshold and high score
+    private MediaPlayer mHighestPointSound;   // The sound player
 
-    private float accelerationThreshold; // From the settings
-    private boolean ballMoving; // Used to make sure a throw can't be initiated when one is in progress
+    private float mAccelerationThreshold; // From the settings
+    private boolean mBallMoving; // Used to make sure a throw can't be initiated when one is in progress
 
-    private ArrayList<Double> accelerations; // This holds the temporary accelerations to find the max
-    private Timer ballTimer; // Used to find the highest acceleration
+    private ArrayList<Double> mAccelerations; // This holds the temporary accelerations to find the max
+    private Timer mBallTimer; // Used to find the highest acceleration
 
     /* Constants */
     public static final float EARTH_GRAVITY = -9.81f; // There's an android constant for this but idk what it is :)
@@ -56,36 +56,36 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        this.initViews();
+        initViews();
 
-        this.sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        this.accelSensors = this.sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mAccelerationSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        this.preferences = getSharedPreferences(MainActivity.PREFERENCES_SETTINGS, 0);
-        this.accelerationThreshold = preferences.getInt(SETTINGS_THRESHOLD, 10);
+        mPreferences = getSharedPreferences(MainActivity.PREFERENCES_SETTINGS, 0);
+        mAccelerationThreshold = mPreferences.getInt(SETTINGS_THRESHOLD, 10);
 
-        this.highestPointSound = MediaPlayer.create(this, R.raw.hiko_are_you_kidding_me);
-        this.ballMoving = false;
-        this.accelerations = new ArrayList<>();
-        this.ballTimer = new Timer();
+        mHighestPointSound = MediaPlayer.create(this, R.raw.hiko_are_you_kidding_me);
+        mBallMoving = false;
+        mAccelerations = new ArrayList<>();
+        mBallTimer = new Timer();
 
-        this.updateHighestThrowText();
+        updateHighestThrowText();
 
 
-        this.btnSettings.setOnClickListener(new View.OnClickListener() {
+        mBtnSettings.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                highestPointSound.start();
+                mHighestPointSound.start();
                 startActivity(new Intent(MainActivity.this, SettingsActivity.class));
             }
         });
 
         // Long clicking on the high score text resets the high score
         // Lets call this an easter egg, so it sounds fun :)
-        this.txtHighestThrow.setOnLongClickListener(new View.OnLongClickListener() {
+        mTxtHighestThrow.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                preferences.edit().putFloat(HIGHSCORE, 0f).apply();
+                mPreferences.edit().putFloat(HIGHSCORE, 0f).apply();
                 updateHighestThrowText();
                 return true;
                 // If there is also an onClick listener registered, returning true will make
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if(!this.ballMoving) {
+        if(!mBallMoving) {
             switch (event.sensor.getType()) {
                 case Sensor.TYPE_ACCELEROMETER:
                     float x = event.values[0];
@@ -107,19 +107,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     // EARTH_GRAVITY is negative, so for it to be correct we need to add instead of subtract
                     final double acceleration = Math.sqrt(x*x + y*y + z*z) + EARTH_GRAVITY;
 
-                    if(acceleration >= this.accelerationThreshold) {
-                        this.accelerations.add(acceleration);
+                    if(acceleration >= mAccelerationThreshold) {
+                        mAccelerations.add(acceleration);
 
                         // First acceleration above the threshold, schedule the ball to move
                         // with the highest acceleration found in a span of 250 milliseconds
-                        if(accelerations.size() == 1) {
-                            this.ballTimer.schedule(new TimerTask() {
+                        if(mAccelerations.size() == 1) {
+                            mBallTimer.schedule(new TimerTask() {
                                 @Override
                                 public void run() {
-                                    double highest = Collections.max(accelerations);
+                                    double highest = Collections.max(mAccelerations);
 
                                     // Needs to be cleared first or else it can run multiple times
-                                    accelerations.clear();
+                                    mAccelerations.clear();
 
                                     moveBall(highest);
                                 }
@@ -138,19 +138,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        sensorManager.registerListener(this, accelSensors, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(this, mAccelerationSensor, SensorManager.SENSOR_DELAY_NORMAL);
 
-        this.accelerationThreshold = preferences.getInt(SETTINGS_THRESHOLD, 10);
+        mAccelerationThreshold = mPreferences.getInt(SETTINGS_THRESHOLD, 10);
     }
 
     /**
      * Initializes all the UI views
      */
     private void initViews() {
-        this.btnSettings = findViewById(R.id.btn_settings);
-        this.imgArrow = findViewById(R.id.img_arrow);
-        this.txtHeight = findViewById(R.id.txt_height);
-        this.txtHighestThrow = findViewById(R.id.txt_highestThrow);
+        mBtnSettings = findViewById(R.id.btn_settings);
+        mImgArrow = findViewById(R.id.img_arrow);
+        mTxtHeight = findViewById(R.id.txt_height);
+        mTxtHighestThrow = findViewById(R.id.txt_highestThrow);
     }
 
     /**
@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      * @param velocity The starting velocity
      */
     private void moveBall(final double velocity) {
-        this.ballMoving = true;
+        mBallMoving = true;
 
         final long startTime = System.currentTimeMillis();
 
@@ -188,12 +188,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if(dt >= timeToHighest) { // Highest point is reached, ball is falling down
                         if(!highestReached) { // First time we reach this point, play a sound
                             highestReached = true;
-                            highestPointSound.start();
+                            mHighestPointSound.start();
 
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() { // Point the arrow downwards
-                                    imgArrow.setRotation(180);
+                                    mImgArrow.setRotation(180);
                                 }
                             });
                         }
@@ -223,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                txtHeight.setText(heightText);
+                                mTxtHeight.setText(heightText);
                             }
                         });
                     }
@@ -232,16 +232,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 runOnUiThread(new Runnable() { // Reset text and image to default
                     @Override
                     public void run() {
-                        txtHeight.setText(R.string.txt_height);
-                        imgArrow.setRotation(0);
+                        mTxtHeight.setText(R.string.txt_height);
+                        mImgArrow.setRotation(0);
                     }
                 });
 
-                ballMoving = false;
+                mBallMoving = false;
                 v.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
 
-                if(highestPos > preferences.getFloat(HIGHSCORE, 0f)) { // This throw was the highest
-                    preferences.edit().putFloat(HIGHSCORE, (float)highestPos).apply();
+                if(highestPos > mPreferences.getFloat(HIGHSCORE, 0f)) { // This throw was the highest
+                    mPreferences.edit().putFloat(HIGHSCORE, (float)highestPos).apply();
                     updateHighestThrowText();
                 }
             }
@@ -252,14 +252,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      * Updates txt_highestThrow to be the highest recorded throw
      */
     private void updateHighestThrowText() {
-        float highestThrow = preferences.getFloat(HIGHSCORE, 0f);
+        float highestThrow = mPreferences.getFloat(HIGHSCORE, 0f);
 
         // Float.compare returns an integer that says which value is highest (0 = equal)
         // This is probably better than comparing two floats directly (because of imprecision)
         if(Float.compare(highestThrow, 0f) == 0) {
-            this.txtHighestThrow.setText(R.string.txt_highscoreDefault);
+            mTxtHighestThrow.setText(R.string.txt_highscoreDefault);
         } else {
-            this.txtHighestThrow.setText(String.format(Locale.getDefault(),
+            mTxtHighestThrow.setText(String.format(Locale.getDefault(),
                     "Highest throw: %d", (int)highestThrow));
         }
     }

@@ -10,9 +10,9 @@ import android.widget.TextView;
 
 public class SettingsActivity extends AppCompatActivity {
 
-    private TextView txtThreshold;
-    private SeekBar seekBarThreshold;
-    private Button btnApply;
+    private TextView mTxtThreshold;
+    private SeekBar mSeekBarThreshold;
+    private Button mBtnApply;
 
     private static final String TAG = "SettingsActivity";
 
@@ -27,16 +27,16 @@ public class SettingsActivity extends AppCompatActivity {
 
         final int currentThreshold = preferences.getInt(MainActivity.SETTINGS_THRESHOLD, 10);
 
-        txtThreshold.setText("Acceleration threshold - " + currentThreshold);
+        mTxtThreshold.setText("Acceleration threshold - " + currentThreshold);
 
-        seekBarThreshold.setProgress(currentThreshold);
-        seekBarThreshold.setMin(10);
-        seekBarThreshold.setMax(30);
+        mSeekBarThreshold.setProgress(currentThreshold);
+        mSeekBarThreshold.setMin(10);
+        mSeekBarThreshold.setMax(30);
 
-        seekBarThreshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        mSeekBarThreshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                txtThreshold.setText("Acceleration threshold - " + progress);
+                mTxtThreshold.setText("Acceleration threshold - " + progress);
             }
 
             @Override
@@ -48,12 +48,12 @@ public class SettingsActivity extends AppCompatActivity {
             }
         });
 
-        btnApply.setOnClickListener(new View.OnClickListener() {
+        mBtnApply.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 final SharedPreferences.Editor preferencesEditor = preferences.edit();
 
-                preferencesEditor.putInt(MainActivity.SETTINGS_THRESHOLD, seekBarThreshold.getProgress());
+                preferencesEditor.putInt(MainActivity.SETTINGS_THRESHOLD, mSeekBarThreshold.getProgress());
                 preferencesEditor.apply();
 
                 finish();
@@ -62,8 +62,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        txtThreshold = findViewById(R.id.txtThreshold);
-        seekBarThreshold = findViewById(R.id.seekBarThreshold);
-        btnApply = findViewById(R.id.btnApply);
+        mTxtThreshold = findViewById(R.id.txtThreshold);
+        mSeekBarThreshold = findViewById(R.id.seekBarThreshold);
+        mBtnApply = findViewById(R.id.btnApply);
     }
 }
