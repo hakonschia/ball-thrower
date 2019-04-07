@@ -16,5 +16,9 @@ The app is built with minSdkVersion 26, and targetSdkVersion 28. It is tested on
 I'm not sure why this is happening (it might be intended behaviour in Android, as far as I know I haven't done anything that would cause it to happen) but if you go out of the app without closing it from the multitasking it will continue to look for accelerations and possibly start playing sounds. For the people testing the app, you should probably delete the app from your phones afterwards (especially because the highest point reached sound is kind of loud and to be honest kind of obnoxious).
 
 ## User testing
-Tested by Magnus Holm-Hagen
+Tested by:
+1. Magnus Holm-Hagen
 ![Magnus Holm-Hagen](https://i.imgur.com/0GpqAhK.png)
+
+2. Erik Mohn
+![Erik Mohn](https://i.imgur.com/xJosaQk.png)
